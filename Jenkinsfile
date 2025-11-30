@@ -2,9 +2,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub')
-        REGISTRY = "docker.io/ragedisplay"
-        VERSION = "v1.0.${BUILD_NUMBER}"
+        DOCKERHUB_REPO = "ragedisplay"   
+        VERSION = "${env.BUILD_NUMBER}"         
     }
 
     stages {
@@ -15,39 +14,70 @@ pipeline {
             }
         }
 
-        stage('Build & Push Images from Compose') {
+        stage('Docker Login') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
+                                                 usernameVariable: 'DOCKER_USER',
+                                                 passwordVariable: 'DOCKER_PASS')]) {
+                    sh """
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    """
+                }
+            }
+        }
+
+        stage('Build Images') {
+            steps {
+                sh """
+                    docker compose build
+                """
+            }
+        }
+
+        stage('Tag & Push Images') {
             steps {
                 script {
-                    def compose = readYaml file: 'docker-compose.yml'
-                    compose.services.each { name, config ->
-                        
-                        def imageName = "${REGISTRY}/${name}"
+                    def services = ["analyzer", "signaturedb", "wafproxy", "waf-admin"]
 
+                    services.each { svc ->
                         sh """
-                        docker build -t ${imageName}:${VERSION} ${config.build ?: "."}
-                        docker tag ${imageName}:${VERSION} ${imageName}:latest
-
-                        echo "${DOCKERHUB_CREDENTIALS_PSW}" | docker login -u "${DOCKERHUB_CREDENTIALS_USR}" --password-stdin
-
-                        docker push ${imageName}:${VERSION}
-                        docker push ${imageName}:latest
+                            docker tag ${svc}:latest ${DOCKERHUB_REPO}/${svc}:${VERSION}
+                            docker tag ${svc}:latest ${DOCKERHUB_REPO}/${svc}:latest
+                            docker push ${DOCKERHUB_REPO}/${svc}:${VERSION}
+                            docker push ${DOCKERHUB_REPO}/${svc}:latest
                         """
                     }
                 }
             }
         }
 
-        stage('Deploy to Kubernetes') {
-            when {
-                expression { fileExists('k8s') }
-            }
+        stage('Security Scan (Trivy)') {
             steps {
                 script {
-                    sh """
-                    kubectl apply -f k8s/
-                    """
+                    sh "mkdir -p trivy-reports"
+                    def services = ["analyzer", "signaturedb", "wafproxy", "waf-admin"]
+
+                    services.each { svc ->
+                        sh """
+                            trivy image --exit-code 0 --format table \
+                            -o trivy-reports/${svc}.txt \
+                            ${DOCKERHUB_REPO}/${svc}:latest
+                        """
+                    }
                 }
             }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-reports/*.txt', fingerprint: true
+                }
+            }
+        }
+
+    }
+
+    post {
+        always {
+            sh "docker logout"
         }
     }
 }
