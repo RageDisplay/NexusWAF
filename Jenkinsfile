@@ -58,28 +58,57 @@ pipeline {
             }
         }
 
-        stage('Trivy Scan') {
+        stage('Trivy Scan (non-blocking)') {
             steps {
                 script {
-                    sh "mkdir -p trivy-reports"
+                    // Prepare workspace-local trivy and cache to avoid snap & HOME problems
+                    sh '''
+                    set -eux
 
-                    IMAGES.split().each { mapping ->
-                        def (localName, hubName) = mapping.tokenize(':')
+                    export TRIVY_WORK_DIR="${WORKSPACE}/.trivy"
+                    export TRIVY_BIN="${WORKSPACE}/bin/trivy"
+                    export PATH="${WORKSPACE}/bin:$PATH"
+                    mkdir -p "${WORKSPACE}/bin" "${TRIVY_WORK_DIR}" "${WORKSPACE}/trivy-reports"
 
-                        sh """
-                            echo "Scanning ${hubName}:latest"
+                    # If trivy binary is not available, download portable tarball into workspace/bin
+                    if ! command -v trivy >/dev/null 2>&1; then
+                      echo "Trivy not found in PATH — downloading local trivy to ${WORKSPACE}/bin ..."
+                      TMPTGZ="/tmp/trivy_$$.tar.gz"
+                      curl -sSfL "https://github.com/aquasecurity/trivy/releases/latest/download/trivy_$(uname -s)_64.tar.gz" -o "${TMPTGZ}" || true
+                      tar -xzf "${TMPTGZ}" -C "${WORKSPACE}/bin" trivy || true
+                      chmod +x "${WORKSPACE}/bin/trivy" || true
+                    fi
 
-                            trivy image --exit-code 0 \
-                                --format table \
-                                -o trivy-reports/${localName}.txt \
-                                ${hubName}:latest
-                        """
-                    }
+                    # ensure we have a trivy binary in PATH now (local one or system)
+                    if ! command -v trivy >/dev/null 2>&1; then
+                      echo "ERROR: trivy binary is not available; skipping scans but not failing the build."
+                      exit 0
+                    fi
+
+                    export TRIVY_CACHE_DIR="${TRIVY_WORK_DIR}/cache"
+                    mkdir -p "${TRIVY_CACHE_DIR}" "${WORKSPACE}/trivy-reports"
+
+                    # Loop images and create JSON + human-readable table reports.
+                    IMAGES_RAW=''' + "'''${IMAGES}'''" + '''
+                    for mapping in ${IMAGES_RAW}; do
+                      # mapping = local:hub
+                      hub=$(echo ${mapping} | cut -d: -f2)
+                      # sanitize name for filenames
+                      safe=$(echo ${hub} | sed 's/[:/]/_/g')
+                      echo "Scanning ${hub}:latest -> trivy-reports/${safe}.json and .txt"
+
+                      # JSON detailed report (do not fail if trivy returns non-zero): store as json
+                      trivy image --cache-dir "${TRIVY_CACHE_DIR}" --format json -o "${WORKSPACE}/trivy-reports/${safe}.json" "${hub}:latest" || true
+
+                      # Human-readable table (also don't fail)
+                      trivy image --cache-dir "${TRIVY_CACHE_DIR}" --format table -o "${WORKSPACE}/trivy-reports/${safe}.txt" "${hub}:latest" || true
+                    done
+                    '''
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'trivy-reports/*.txt', fingerprint: true
+                    archiveArtifacts artifacts: 'trivy-reports/*', fingerprint: true
                 }
             }
         }
@@ -87,7 +116,7 @@ pipeline {
 
     post {
         always {
-            sh 'docker logout'
+            sh 'docker logout || true'
         }
     }
 }
