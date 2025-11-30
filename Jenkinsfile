@@ -58,48 +58,32 @@ pipeline {
             }
         }
 
-stage('Trivy Scan') {
-  steps {
-    script {
-      sh '''
-      set -e
-      if ! command -v trivy >/dev/null 2>&1; then
-        echo "Installing trivy..."
-        curl -sSfL https://github.com/aquasecurity/trivy/releases/latest/download/trivy_$(uname -s)_64.tar.gz -o /tmp/trivy.tar.gz || true
-        mkdir -p /tmp/trivy-bin
-        tar -xzf /tmp/trivy.tar.gz -C /tmp/trivy-bin || true
-        sudo mv /tmp/trivy-bin/trivy /usr/local/bin/trivy || true
-      fi
+        stage('Trivy Scan') {
+            steps {
+                script {
+                    sh "mkdir -p trivy-reports"
 
-      export TRIVY_CACHE_DIR=/tmp/trivy-cache
-      mkdir -p ${WORKSPACE}/trivy-reports ${TRIVY_CACHE_DIR}
+                    IMAGES.split().each { mapping ->
+                        def (localName, hubName) = mapping.tokenize(':')
 
-      IMAGES="${IMAGES_RAW}"   
-      for img in $IMAGES; do
-        safe=$(echo $img | sed 's/[:/]/_/g')
-        echo "Scanning $img -> trivy-reports/${safe}.json"
-        # json report (detailed)
-        trivy image --security-checks vuln,config --format json -o ${WORKSPACE}/trivy-reports/${safe}.json $img || true
-        # also generate small human-readable table
-        trivy image --security-checks vuln --format table -o ${WORKSPACE}/trivy-reports/${safe}.txt $img || true
-      done
-      '''
+                        sh """
+                            echo "Scanning ${hubName}:latest"
+
+                            trivy image --exit-code 0 \
+                                --format table \
+                                -o trivy-reports/${localName}.txt \
+                                ${hubName}:latest
+                        """
+                    }
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-reports/*.txt', fingerprint: true
+                }
+            }
+        }
     }
-  }
-  post {
-    always {
-      archiveArtifacts artifacts: 'trivy-reports/*', fingerprint: true
-      publishHTML (target: [
-         allowMissing: true,
-         alwaysLinkToLastBuild: true,
-         keepAll: true,
-         reportDir: 'trivy-reports',
-         reportFiles: 'index.html',
-         reportName: 'Trivy Reports'
-      ]) // optional
-    }
-  }
-}
 
     post {
         always {
