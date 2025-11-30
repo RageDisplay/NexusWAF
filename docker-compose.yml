@@ -13,6 +13,7 @@ services:
 
   # Сервис для управления сигнатурами
   signaturedb:
+    image: signaturedb
     build:
       context: ./signaturedb
     ports:
@@ -26,6 +27,7 @@ services:
 
   # Анализатор запросов
   analyzer:
+    image: analyzer
     build:
       context: ./analyzer
     ports:
@@ -35,6 +37,7 @@ services:
 
   # Сам WAF Proxy
   wafproxy:
+    image: wafproxy
     build:
       context: ./wafproxy
     ports:
@@ -52,6 +55,7 @@ services:
 
   # Веб-интерфейс для управления WAF
   waf-admin:
+    image: waf-admin
     build:
       context: ./waf-admin
     ports:
@@ -69,4 +73,5 @@ networks:
   waf-net:
 
 volumes:
+
   redis_data:
