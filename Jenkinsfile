@@ -37,7 +37,7 @@ pipeline {
         stage('Tag & Push Images') {
             steps {
                 script {
-                    def services = ["analyzer", "signaturedb", "wafproxy", "waf-admin"]
+                    def services = ["nexuswaf-analyzer", "nexuswaf-signaturedb", "nexuswaf-proxy", "nexuswaf--admin"]
 
                     services.each { svc ->
                         sh """
@@ -55,7 +55,7 @@ pipeline {
             steps {
                 script {
                     sh "mkdir -p trivy-reports"
-                    def services = ["analyzer", "signaturedb", "wafproxy", "waf-admin"]
+                    def services = ["nexuswaf-analyzer", "nexuswaf-signaturedb", "nexuswaf-proxy", "nexuswaf--admin"]
 
                     services.each { svc ->
                         sh """
