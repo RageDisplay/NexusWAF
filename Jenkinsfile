@@ -63,8 +63,6 @@ stage('Trivy Scan') {
     script {
       sh '''
       set -e
-
-      # ensure trivy binary (not snap). If trivy not installed, download latest binary.
       if ! command -v trivy >/dev/null 2>&1; then
         echo "Installing trivy..."
         curl -sSfL https://github.com/aquasecurity/trivy/releases/latest/download/trivy_$(uname -s)_64.tar.gz -o /tmp/trivy.tar.gz || true
@@ -76,7 +74,6 @@ stage('Trivy Scan') {
       export TRIVY_CACHE_DIR=/tmp/trivy-cache
       mkdir -p ${WORKSPACE}/trivy-reports ${TRIVY_CACHE_DIR}
 
-      # images to scan - use the pushed DockerHub names (so scan same image as produced)
       IMAGES="${IMAGES_RAW}"   
       for img in $IMAGES; do
         safe=$(echo $img | sed 's/[:/]/_/g')
