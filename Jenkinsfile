@@ -2,8 +2,13 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_REPO = "ragedisplay"   
-        VERSION = "${env.BUILD_NUMBER}"         
+        IMAGES = """
+            signaturedb:ragedisplay/nexuswaf-signaturedb
+            analyzer:ragedisplay/nexuswaf-analyzer
+            waf-admin:ragedisplay/nexuswaf-admin
+            wafproxy:ragedisplay/nexuswaf-proxy
+        """
+        VERSION = "${env.BUILD_NUMBER}"
     }
 
     stages {
@@ -16,52 +21,55 @@ pipeline {
 
         stage('Docker Login') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub',
-                                                 usernameVariable: 'DOCKER_USER',
-                                                 passwordVariable: 'DOCKER_PASS')]) {
-                    sh """
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                    """
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub',
+                    usernameVariable: 'USER',
+                    passwordVariable: 'PASS'
+                )]) {
+                    sh 'echo "$PASS" | docker login -u "$USER" --password-stdin'
                 }
             }
         }
 
         stage('Build Images') {
             steps {
-                sh """
-                    docker compose build
-                """
+                sh 'docker compose build'
             }
         }
 
-        stage('Tag & Push Images') {
+        stage('Tag & Push') {
             steps {
                 script {
-                    def services = ["nexuswaf-analyzer", "nexuswaf-signaturedb", "nexuswaf-proxy", "nexuswaf-admin"]
 
-                    services.each { svc ->
+                    IMAGES.split().each { pair ->
+                        def (localName, hubName) = pair.tokenize(':')
+
                         sh """
-                            docker tag ${svc}:latest ${DOCKERHUB_REPO}/${svc}:${VERSION}
-                            docker tag ${svc}:latest ${DOCKERHUB_REPO}/${svc}:latest
-                            docker push ${DOCKERHUB_REPO}/${svc}:${VERSION}
-                            docker push ${DOCKERHUB_REPO}/${svc}:latest
+                            echo "Processing $localName → $hubName"
+
+                            docker tag ${localName}:latest ${hubName}:${VERSION}
+                            docker tag ${localName}:latest ${hubName}:latest
+
+                            docker push ${hubName}:${VERSION}
+                            docker push ${hubName}:latest
                         """
                     }
                 }
             }
         }
 
-        stage('Security Scan (Trivy)') {
+        stage('Trivy Scan') {
             steps {
                 script {
                     sh "mkdir -p trivy-reports"
-                    def services = ["nexuswaf-analyzer", "nexuswaf-signaturedb", "nexuswaf-proxy", "nexuswaf-admin"]
 
-                    services.each { svc ->
+                    IMAGES.split().each { pair ->
+                        def (localName, hubName) = pair.tokenize(':')
+
                         sh """
                             trivy image --exit-code 0 --format table \
-                            -o trivy-reports/${svc}.txt \
-                            ${DOCKERHUB_REPO}/${svc}:latest
+                                -o trivy-reports/${localName}.txt \
+                                ${hubName}:latest
                         """
                     }
                 }
@@ -72,12 +80,9 @@ pipeline {
                 }
             }
         }
-
     }
 
     post {
-        always {
-            sh "docker logout"
-        }
+        always { sh 'docker logout' }
     }
 }
