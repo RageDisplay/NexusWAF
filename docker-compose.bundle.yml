@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # Redis для хранения сигнатур и конфигурации
   redis:
     image: ragedisplay/nexuswaf-redis:demo
     ports:
@@ -11,9 +10,8 @@ services:
     networks:
       - waf-net
 
-  # Сервис для управления сигнатурами
   signaturedb:
-    image: ragedisplay/nexuswaf-signaturedb:demo  
+    image: ragedisplay/nexuswaf-signaturedb:latest
     ports:
       - "8082:8082"
     environment:
@@ -23,17 +21,15 @@ services:
     networks:
       - waf-net
 
-  # Анализатор запросов
   analyzer:
-    image: ragedisplay/nexuswaf-analyzer:demo     
+    image: ragedisplay/nexuswaf-analyzer:latest   
     ports:
       - "8083:8083"
     networks:
       - waf-net
 
-  # Сам WAF Proxy
   wafproxy:
-    image: ragedisplay/nexuswaf-proxy:demo     
+    image: ragedisplay/nexuswaf-proxy:latest
     ports:
       - "${WAF_PORT:-8081}:${WAF_PORT:-8081}"
     environment:
@@ -47,9 +43,8 @@ services:
     networks:
       - waf-net
 
-  # Веб-интерфейс для управления WAF
   waf-admin:
-    image: ragedisplay/nexuswaf-admin:demo   
+    image: ragedisplay/nexuswaf-admin:latest  
     ports:
       - "8080:8080"
     environment:

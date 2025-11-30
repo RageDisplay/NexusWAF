@@ -32,7 +32,7 @@ func NewSignatureServer(redisAddr string) *SignatureServer {
 func (s *SignatureServer) LoadInitialSignatures() {
 	ctx := context.Background()
 
-	// SQL Injection patterns - СТАНДАРТНЫЕ
+	// SQL Injection patterns
 	sqlPatterns := []string{
 		`(?i)(union.*select|select.*from|insert.*into|delete.*from)`,
 		`(?i)(drop.*table|update.*set|waitfor.*delay)`,
@@ -48,7 +48,7 @@ func (s *SignatureServer) LoadInitialSignatures() {
 		`(vbscript:|window\.location)`,
 	}
 
-	// Command Injection - ПРОСТЫЕ ПАТТЕРНЫ
+	// Command Injection
 	cmdPatterns := []string{
 		`(\|.*whoami)`,
 		`(;.*whoami)`,
@@ -72,7 +72,7 @@ func (s *SignatureServer) LoadInitialSignatures() {
 		`(chmod 777)`,
 	}
 
-	// Path Traversal - ПРОСТЫЕ ПАТТЕРНЫ
+	// Path Traversal
 	pathPatterns := []string{
 		`(\.\.\/)`,
 		`(\.\.\\)`,

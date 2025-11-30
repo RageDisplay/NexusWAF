@@ -74,12 +74,10 @@ func main() {
 		DB:       0,
 	})
 
-	// Инициализация默认配置
 	initDefaultConfig()
 
 	r := mux.NewRouter()
 
-	// Статические файлы
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
 
 	// API маршруты

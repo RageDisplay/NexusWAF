@@ -97,7 +97,7 @@ func NewWAFProxy(target string, redisAddr string) (*WAFProxy, error) {
 func (p *WAFProxy) checkRequest(r *http.Request) (bool, []string) {
 	var threats []string
 
-	// Check URL and query params - ДЕКОДИРУЕМ URL
+	// Декодируем URL
 	fullURL := r.URL.String() + " " + r.URL.RawQuery
 	decodedURL, _ := url.QueryUnescape(fullURL)
 	log.Printf("Checking URL (decoded): %s", decodedURL)
@@ -106,9 +106,8 @@ func (p *WAFProxy) checkRequest(r *http.Request) (bool, []string) {
 		threats = append(threats, threatsFound...)
 	}
 
-	// Check headers - ТОЛЬКО ДЛЯ ОПАСНЫХ ЗАГОЛОВКОВ
+	// Check headers
 	for name, values := range r.Header {
-		// Проверяем только подозрительные заголовки
 		if p.isSuspiciousHeader(name) {
 			for _, value := range values {
 				if threatsFound := p.checkPatterns(name+": "+value, "header"); len(threatsFound) > 0 {
@@ -118,7 +117,7 @@ func (p *WAFProxy) checkRequest(r *http.Request) (bool, []string) {
 		}
 	}
 
-	// Check body for POST/PUT - ДЕКОДИРУЕМ FORM DATA
+	// Check body for POST/PUT
 	if r.Method == http.MethodPost || r.Method == http.MethodPut {
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -148,7 +147,6 @@ func (p *WAFProxy) checkRequest(r *http.Request) (bool, []string) {
 }
 
 func (p *WAFProxy) isSuspiciousHeader(name string) bool {
-	// Проверяем только потенциально опасные заголовки
 	suspiciousHeaders := []string{
 		"user-agent", "referer", "origin", "cookie",
 		"x-forwarded-for", "x-real-ip", "authorization",
@@ -167,7 +165,6 @@ func (p *WAFProxy) checkPatterns(input, inputType string) []string {
 	ctx := context.Background()
 	var threats []string
 
-	// Check all pattern categories
 	categories := []struct {
 		name    string
 		enabled bool
@@ -250,7 +247,7 @@ func (p *WAFProxy) updateStats(threatType string) {
 
 	logEntry := LogEntry{
 		Timestamp: time.Now(),
-		IP:        "127.0.0.1",
+		IP:        "127.0.0.1", //Пока заглушка - доработать
 		Method:    "GET",
 		URL:       "/",
 		Threats:   []string{threatType},

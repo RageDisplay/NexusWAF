@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # Redis для хранения сигнатур и конфигурации
   redis:
     image: redis:alpine
     ports:
@@ -11,7 +10,6 @@ services:
     networks:
       - waf-net
 
-  # Сервис для управления сигнатурами
   signaturedb:
     image: signaturedb
     build:
@@ -25,7 +23,6 @@ services:
     networks:
       - waf-net
 
-  # Анализатор запросов
   analyzer:
     image: analyzer
     build:
@@ -35,13 +32,12 @@ services:
     networks:
       - waf-net
 
-  # Сам WAF Proxy
   wafproxy:
     image: wafproxy
     build:
       context: ./wafproxy
     ports:
-      - "${WAF_PORT:-8081}:${WAF_PORT:-8081}" # Динамический порт из конфигурации
+      - "${WAF_PORT:-8081}:${WAF_PORT:-8081}"
     environment:
       - TARGET_URL=http://192.168.200.50:7000
       - REDIS_ADDR=redis:6379
@@ -53,7 +49,6 @@ services:
     networks:
       - waf-net
 
-  # Веб-интерфейс для управления WAF
   waf-admin:
     image: waf-admin
     build:
