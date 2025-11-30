@@ -2,13 +2,14 @@ pipeline {
     agent any
 
     environment {
+        VERSION = "${env.BUILD_NUMBER}"
+
         IMAGES = """
-            signaturedb:ragedisplay/nexuswaf-signaturedb
             analyzer:ragedisplay/nexuswaf-analyzer
+            signaturedb:ragedisplay/nexuswaf-signaturedb
             waf-admin:ragedisplay/nexuswaf-admin
             wafproxy:ragedisplay/nexuswaf-proxy
         """
-        VERSION = "${env.BUILD_NUMBER}"
     }
 
     stages {
@@ -31,21 +32,20 @@ pipeline {
             }
         }
 
-        stage('Build Images') {
+        stage('Build Docker Images') {
             steps {
                 sh 'docker compose build'
             }
         }
 
-        stage('Tag & Push') {
+        stage('Tag & Push Images') {
             steps {
                 script {
-
-                    IMAGES.split().each { pair ->
-                        def (localName, hubName) = pair.tokenize(':')
+                    IMAGES.split().each { mapping ->
+                        def (localName, hubName) = mapping.tokenize(':')
 
                         sh """
-                            echo "Processing $localName → $hubName"
+                            echo "Tagging $localName as $hubName"
 
                             docker tag ${localName}:latest ${hubName}:${VERSION}
                             docker tag ${localName}:latest ${hubName}:latest
@@ -63,11 +63,14 @@ pipeline {
                 script {
                     sh "mkdir -p trivy-reports"
 
-                    IMAGES.split().each { pair ->
-                        def (localName, hubName) = pair.tokenize(':')
+                    IMAGES.split().each { mapping ->
+                        def (localName, hubName) = mapping.tokenize(':')
 
                         sh """
-                            trivy image --exit-code 0 --format table \
+                            echo "Scanning ${hubName}:latest"
+
+                            trivy image --exit-code 0 \
+                                --format table \
                                 -o trivy-reports/${localName}.txt \
                                 ${hubName}:latest
                         """
@@ -83,6 +86,8 @@ pipeline {
     }
 
     post {
-        always { sh 'docker logout' }
+        always {
+            sh 'docker logout'
+        }
     }
 }
