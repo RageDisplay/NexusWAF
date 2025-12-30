@@ -22,6 +22,21 @@
     <div class="container">
         <div class="card">
             <h2 style="margin-bottom: 1rem;">Логи безопасности</h2>
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center;">
+                <input id="filterIP" class="form-control" placeholder="Фильтр по IP" style="max-width:220px;" />
+                <select id="filterMethod" class="form-control" style="max-width:160px;">
+                    <option value="">Все методы</option>
+                    <option>GET</option>
+                    <option>POST</option>
+                    <option>PUT</option>
+                    <option>DELETE</option>
+                    <option>PATCH</option>
+                </select>
+                <input id="filterThreat" class="form-control" placeholder="Фильтр по угрозе (sqli, xss...)" style="max-width:260px;" />
+                <button class="btn btn-primary" onclick="applyFilters()">Применить</button>
+                <button class="btn" onclick="clearFilters()">Сброс</button>
+            </div>
+
             <div id="logsContainer">
                 <div class="loading"></div>
             </div>
@@ -40,27 +55,68 @@
                     container.innerHTML = '<p>Логи отсутствуют</p>';
                     return;
                 }
-                
-                container.innerHTML = logs.map(log => `
-                    <div class="log-entry">
-                        <div style="display: flex; justify-content: between; margin-bottom: 0.5rem;">
-                            <strong>${new Date(log.timestamp).toLocaleString()}</strong>
-                            <span class="badge ${log.action === 'block' ? 'badge-danger' : 'badge-success'}">${log.action}</span>
-                        </div>
-                        <div><strong>IP:</strong> ${log.ip}</div>
-                        <div><strong>Метод:</strong> ${log.method}</div>
-                        <div><strong>URL:</strong> ${log.url}</div>
-                        ${log.threats && log.threats.length > 0 ? `
-                            <div class="log-threats">
-                                <strong>Угрозы:</strong>
-                                ${log.threats.map(threat => `<span class="log-threat">${threat}</span>`).join('')}
-                            </div>
-                        ` : ''}
-                    </div>
-                `).join('');
+
+                // Сохраняем в глобальную переменную для фильтрации
+                window._wafLogs = logs;
+
+                renderLogs(logs);
             } catch (error) {
                 document.getElementById('logsContainer').innerHTML = '<p>Ошибка загрузки логов</p>';
             }
+        }
+
+        function renderLogs(logs) {
+            const container = document.getElementById('logsContainer');
+            container.innerHTML = logs.map(log => {
+                const time = new Date(log.timestamp).toLocaleString();
+                const actionClass = log.action === 'block' ? 'badge-danger' : 'badge-success';
+                const threats = (log.threats || []).map(t => `<span class="log-threat">${t}</span>`).join('');
+                const shortUrl = log.url.length > 120 ? log.url.slice(0, 117) + '...' : log.url;
+                return `
+                    <div class="log-entry">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                            <div style="font-size:0.95rem; color:#555;"><strong>${time}</strong></div>
+                            <div style="display:flex; gap:0.5rem; align-items:center;">
+                                <span class="badge ${actionClass}">${log.action}</span>
+                                <button class="btn" onclick='copyToClipboard("${escapeHtml(log.ip)} ${escapeHtml(log.method)} ${escapeHtml(log.url)}")'>Копировать</button>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:1.5rem; flex-wrap:wrap;">
+                            <div><strong>IP:</strong> ${escapeHtml(log.ip)}</div>
+                            <div><strong>Метод:</strong> ${escapeHtml(log.method)}</div>
+                            <div style="flex:1; min-width:220px;"><strong>URL:</strong> <span title="${escapeHtml(log.url)}">${escapeHtml(shortUrl)}</span></div>
+                        </div>
+                        ${threats ? `<div class="log-threats" style="margin-top:0.5rem;"><strong>Угрозы:</strong> ${threats}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function escapeHtml(s){
+            if(!s) return '';
+            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard && navigator.clipboard.writeText(text);
+        }
+
+        function applyFilters() {
+            const ip = document.getElementById('filterIP').value.trim().toLowerCase();
+            const method = document.getElementById('filterMethod').value.trim().toUpperCase();
+            const threat = document.getElementById('filterThreat').value.trim().toLowerCase();
+            let logs = window._wafLogs || [];
+            if (ip) logs = logs.filter(l => (l.ip || '').toLowerCase().includes(ip));
+            if (method) logs = logs.filter(l => (l.method || '').toUpperCase() === method);
+            if (threat) logs = logs.filter(l => (l.threats || []).some(t => t.toLowerCase().includes(threat)));
+            renderLogs(logs);
+        }
+
+        function clearFilters() {
+            document.getElementById('filterIP').value = '';
+            document.getElementById('filterMethod').value = '';
+            document.getElementById('filterThreat').value = '';
+            renderLogs(window._wafLogs || []);
         }
 
         // Загружаем логи при загрузке страницы и каждые 10 секунд

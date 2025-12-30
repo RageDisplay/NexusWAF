@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -102,7 +103,7 @@ func (p *WAFProxy) checkRequest(r *http.Request) (bool, []string) {
 	decodedURL, _ := url.QueryUnescape(fullURL)
 	log.Printf("Checking URL (decoded): %s", decodedURL)
 
-	if threatsFound := p.checkPatterns(decodedURL, "url"); len(threatsFound) > 0 {
+	if threatsFound := p.checkPatterns(decodedURL, "url", r); len(threatsFound) > 0 {
 		threats = append(threats, threatsFound...)
 	}
 
@@ -110,7 +111,7 @@ func (p *WAFProxy) checkRequest(r *http.Request) (bool, []string) {
 	for name, values := range r.Header {
 		if p.isSuspiciousHeader(name) {
 			for _, value := range values {
-				if threatsFound := p.checkPatterns(name+": "+value, "header"); len(threatsFound) > 0 {
+				if threatsFound := p.checkPatterns(name+": "+value, "header", r); len(threatsFound) > 0 {
 					threats = append(threats, threatsFound...)
 				}
 			}
@@ -131,12 +132,12 @@ func (p *WAFProxy) checkRequest(r *http.Request) (bool, []string) {
 		if strings.Contains(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
 			decodedBody, _ := url.QueryUnescape(bodyStr)
 			log.Printf("Checking body (decoded): %s", decodedBody)
-			if threatsFound := p.checkPatterns(decodedBody, "body"); len(threatsFound) > 0 {
+			if threatsFound := p.checkPatterns(decodedBody, "body", r); len(threatsFound) > 0 {
 				threats = append(threats, threatsFound...)
 			}
 		} else {
 			log.Printf("Checking body: %s", bodyStr)
-			if threatsFound := p.checkPatterns(bodyStr, "body"); len(threatsFound) > 0 {
+			if threatsFound := p.checkPatterns(bodyStr, "body", r); len(threatsFound) > 0 {
 				threats = append(threats, threatsFound...)
 			}
 		}
@@ -161,7 +162,7 @@ func (p *WAFProxy) isSuspiciousHeader(name string) bool {
 	return false
 }
 
-func (p *WAFProxy) checkPatterns(input, inputType string) []string {
+func (p *WAFProxy) checkPatterns(input, inputType string, r *http.Request) []string {
 	ctx := context.Background()
 	var threats []string
 
@@ -205,7 +206,7 @@ func (p *WAFProxy) checkPatterns(input, inputType string) []string {
 					continue
 				}
 				threats = append(threats, category.name+": "+pattern)
-				p.updateStats(category.name)
+				p.updateStats(category.name, r)
 			}
 		}
 	}
@@ -238,18 +239,36 @@ func (p *WAFProxy) isFalsePositive(input, category, pattern, inputType string) b
 	return false
 }
 
-func (p *WAFProxy) updateStats(threatType string) {
+func (p *WAFProxy) updateStats(threatType string, r *http.Request) {
 	ctx := context.Background()
 
 	p.redisClient.Incr(ctx, "waf:stats:total_requests")
 	p.redisClient.Incr(ctx, "waf:stats:blocked_requests")
 	p.redisClient.Incr(ctx, "waf:stats:threats:"+threatType)
 
+	ip := getClientIP(r)
+
+	method := ""
+	urlStr := ""
+	if r != nil {
+		method = r.Method
+		if r.URL != nil {
+			urlStr = r.URL.RequestURI()
+		}
+	}
+
+	if method == "" {
+		method = "UNKNOWN"
+	}
+	if urlStr == "" {
+		urlStr = "/"
+	}
+
 	logEntry := LogEntry{
 		Timestamp: time.Now(),
-		IP:        "127.0.0.1", //Пока заглушка - доработать
-		Method:    "GET",
-		URL:       "/",
+		IP:        ip,
+		Method:    method,
+		URL:       urlStr,
 		Threats:   []string{threatType},
 		Action:    "block",
 	}
@@ -257,6 +276,52 @@ func (p *WAFProxy) updateStats(threatType string) {
 	logData, _ := json.Marshal(logEntry)
 	p.redisClient.LPush(ctx, "waf:logs", logData)
 	p.redisClient.LTrim(ctx, "waf:logs", 0, 999)
+}
+
+// getClientIP пытается извлечь реальный IP клиента, обходя Docker bridge (172.16.0.0/12)
+func getClientIP(r *http.Request) string {
+	if r == nil {
+		return "unknown"
+	}
+
+	// Попробуем X-Forwarded-For (список IP: client, proxy1, proxy2)
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		parts := strings.Split(xff, ",")
+		// Ищем первый приемлемый IP (не принадлежащий Docker-bridge и не loopback)
+		for _, p := range parts {
+			ip := strings.TrimSpace(p)
+			parsed := net.ParseIP(ip)
+			if parsed == nil {
+				continue
+			}
+			if isDockerBridgeIP(parsed) || parsed.IsLoopback() {
+				continue
+			}
+			return ip
+		}
+		// Если ничего подходящего не найдено — вернём первый элемент
+		if len(parts) > 0 {
+			return strings.TrimSpace(parts[0])
+		}
+	}
+
+	// Попробуем X-Real-IP
+	if xr := r.Header.Get("X-Real-IP"); xr != "" {
+		return strings.TrimSpace(xr)
+	}
+
+	// fallback — RemoteAddr без порта
+	addr := r.RemoteAddr
+	if host, _, err := net.SplitHostPort(addr); err == nil {
+		return host
+	}
+	return addr
+}
+
+func isDockerBridgeIP(ip net.IP) bool {
+	// Проверим диапазон 172.16.0.0/12 (включает 172.17.*, 172.18.*, 172.19.* и т.д.)
+	_, dockerNet, _ := net.ParseCIDR("172.16.0.0/12")
+	return dockerNet.Contains(ip)
 }
 
 func (p *WAFProxy) updateTotalRequests() {

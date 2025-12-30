@@ -112,6 +112,8 @@
                 <div style="margin-bottom: 0.5rem;"><strong>Заблокировано:</strong> ${stats.blocked_requests}</div>
                 <div style="margin-bottom: 0.5rem;"><strong>SQLi атак:</strong> ${stats.threats_by_type.sqli || 0}</div>
                 <div style="margin-bottom: 0.5rem;"><strong>XSS атак:</strong> ${stats.threats_by_type.xss || 0}</div>
+                <div style="margin-bottom: 0.5rem;"><strong>Command Injection атак:</strong> ${stats.threats_by_type.cmdi || 0}</div>
+                <div style="margin-bottom: 0.5rem;"><strong>Path Traversal атак:</strong> ${stats.threats_by_type.pathtraversal || 0}</div>
                 <div><strong>Обновлено:</strong> ${new Date(stats.last_updated).toLocaleString()}</div>
             `;
 
