@@ -1,0 +1,19 @@
+[Unit]
+Description=WAF Port Update Monitor Daemon
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=waf
+WorkingDirectory=/opt/waf
+Environment="REDIS_HOST=localhost"
+Environment="REDIS_PORT=6379"
+ExecStart=/usr/bin/python3 /opt/waf/waf-port-monitor.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

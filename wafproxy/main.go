@@ -24,6 +24,7 @@ type WAFProxy struct {
 	redisClient    *redis.Client
 	analyzerClient *http.Client
 	config         *AppConfig
+	currentPort    string
 }
 
 type AppConfig struct {
@@ -69,11 +70,17 @@ func NewWAFProxy(target string, redisAddr string) (*WAFProxy, error) {
 		DB:       0,
 	})
 
+	currentPort := os.Getenv("PORT")
+	if currentPort == "" {
+		currentPort = "8081"
+	}
+
 	p := &WAFProxy{
 		target:         u,
 		proxy:          httputil.NewSingleHostReverseProxy(u),
 		redisClient:    rdb,
 		analyzerClient: &http.Client{Timeout: 500 * time.Millisecond},
+		currentPort:    currentPort,
 	}
 
 	p.proxy.ModifyResponse = func(resp *http.Response) error {
@@ -373,6 +380,7 @@ func (p *WAFProxy) loadConfig() {
 	log.Printf("Loaded config: SQLi=%t, XSS=%t, CMDi=%t, Path=%t",
 		config.EnableSQLi, config.EnableXSS, config.EnableCMDi, config.EnablePath)
 
+	// Проверяем изменение целевого URL
 	if config.TargetURL != "" && config.TargetURL != p.target.String() {
 		newTarget, err := url.Parse(config.TargetURL)
 		if err == nil {
@@ -380,6 +388,22 @@ func (p *WAFProxy) loadConfig() {
 			p.proxy = httputil.NewSingleHostReverseProxy(newTarget)
 			log.Printf("Updated target URL to: %s", config.TargetURL)
 		}
+	}
+
+	// Проверяем изменение порта и переконфигурируем контейнер Docker
+	if config.ListenPort != "" && config.ListenPort != p.currentPort {
+		log.Printf("Port change detected: %s -> %s", p.currentPort, config.ListenPort)
+		oldPort := p.currentPort
+		p.currentPort = config.ListenPort
+
+		// Используем Redis для сигнализации демону на хосте
+		go func() {
+			if err := updateContainerPort(p.redisClient, oldPort, config.ListenPort); err != nil {
+				log.Printf("Error updating container port: %v", err)
+				// Откатываем изменение в случае ошибки
+				p.currentPort = oldPort
+			}
+		}()
 	}
 }
 
@@ -390,6 +414,26 @@ func (p *WAFProxy) startConfigWatcher() {
 			p.loadConfig()
 		}
 	}()
+}
+
+// updateContainerPort записывает требуемый порт в Redis для демона на хосте
+// Демон (waf-port-monitor.py) отслеживает изменения и пересоздает контейнер
+func updateContainerPort(rdb *redis.Client, oldPort, newPort string) error {
+	ctx := context.Background()
+	redisKey := "waf:port:requested"
+
+	log.Printf("Writing port request to Redis: %s", redisKey)
+
+	// Сохраняем требуемый порт в Redis для сигнализации демону
+	if err := rdb.Set(ctx, redisKey, newPort, 0).Err(); err != nil {
+		log.Printf("Error saving port request to Redis: %v", err)
+		return err
+	}
+
+	log.Printf("Port request saved to Redis. Waiting for host daemon to apply changes...")
+	log.Printf("Demоn (waf-port-monitor.py) will execute: docker-compose up -d --force-recreate --no-deps wafproxy")
+
+	return nil
 }
 
 func main() {

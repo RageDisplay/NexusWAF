@@ -43,6 +43,12 @@ services:
       - REDIS_ADDR=redis:6379
       - ANALYZER_URL=http://analyzer:8083/analyze
       - PORT=${WAF_PORT:-8081}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - CONTAINER_NAME=wafproxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./waf-config:/etc/waf-config
+    restart: unless-stopped
     depends_on:
       - redis
       - analyzer

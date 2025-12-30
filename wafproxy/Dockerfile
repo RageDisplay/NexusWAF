@@ -11,7 +11,7 @@ FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/waf-proxy .
 
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates docker-cli
 
 EXPOSE 8081
 CMD ["./waf-proxy"]
