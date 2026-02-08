@@ -3,14 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Статистика WAF</title>
+    <title>Статистика WAF - NexusWAF</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .stat-item {
+            padding: 1.5rem;
+            background: rgba(6, 182, 212, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(6, 182, 212, 0.1);
+            border-left: 3px solid #06b6d4;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-item:hover {
+            transform: translateY(-3px);
+            border-left-color: #0ea5e9;
+            background: rgba(6, 182, 212, 0.1);
+        }
+        
+        .stat-item-label {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-item-value {
+            color: #0ea5e9;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <a href="/" class="navbar-brand">WAF Dashboard</a>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <a href="/" class="navbar-brand" style="display: flex; align-items: center; gap: 0.75rem;"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.6));"><path d="M16 2L4 8V14C4 23 16 30 16 30C16 30 28 23 28 14V8L16 2Z" fill="url(#gradient)" stroke="#0ea5e9" stroke-width="1.5"/><defs><linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" /><stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:1" /></linearGradient></defs></svg>NexusWAF</a>
             <ul class="navbar-nav">
                 <li><a href="/" class="nav-link">Главная</a></li>
                 <li><a href="/config" class="nav-link">Настройки</a></li>
@@ -21,25 +58,71 @@
     </nav>
 
     <div class="container">
+        <!-- Main Chart -->
         <div class="card">
-            <h2 style="margin-bottom: 1rem;">Статистика угроз по типам</h2>
-            <div class="chart-container">
+            <h2 style="display: flex; align-items: center; gap: 0.5rem;">Статистика угроз по типам</h2>
+            <div class="chart-container" style="height: 400px;">
                 <canvas id="threatsChart"></canvas>
             </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+        <!-- Key Metrics -->
+        <div class="card" style="margin-top: 2rem;">
+            <h2 style="display: flex; align-items: center; gap: 0.5rem;">Ключевые показатели</h2>
+            <div class="stats-grid" id="keyMetrics">
+                <div class="stat-item">
+                    <div class="stat-item-label">Всего запросов</div>
+                    <div class="stat-item-value" id="totalReqs">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-item-label">Заблокировано</div>
+                    <div class="stat-item-value" id="blockedReqs">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-item-label">Успешных</div>
+                    <div class="stat-item-value" id="successReqs">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-item-label">Процент блокировки</div>
+                    <div class="stat-item-value" id="blockRate">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Stats -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+            <!-- General Statistics -->
             <div class="card">
-                <h3>Общая статистика</h3>
-                <div id="generalStats">
-                    <div class="loading"></div>
+                <h3 style="display: flex; align-items: center; gap: 0.5rem;">Общая статистика</h3>
+                <div id="generalStats" class="stats-grid">
+                    <div class="loading" style="margin-top: 2rem; margin-left: auto; margin-right: auto;"></div>
                 </div>
             </div>
 
+            <!-- Threats by Type -->
             <div class="card">
-                <h3>Эффективность защиты</h3>
-                <div id="efficiencyStats">
+                <h3 style="display: flex; align-items: center; gap: 0.5rem;">Угрозы по типам</h3>
+                <div id="efficiencyStats" class="stats-grid">
+                    <div class="loading" style="margin-top: 2rem; margin-left: auto; margin-right: auto;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Info -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+            <div class="card">
+                <h3 style="display: flex; align-items: center; gap: 0.5rem;">⏱Последнее обновление</h3>
+                <div id="lastUpdate" style="color: #94a3b8; margin-top: 1rem;">
                     <div class="loading"></div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3 style="display: flex; align-items: center; gap: 0.5rem;">Рекомендации</h3>
+                <div style="margin-top: 1rem;">
+                    <div id="recommendations" style="color: #94a3b8; line-height: 1.6;">
+                        <p>Анализирую данные...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -67,21 +150,30 @@
                 threatsChart.destroy();
             }
 
+            const threats = {
+                sqli: stats.threats_by_type.sqli || 0,
+                xss: stats.threats_by_type.xss || 0,
+                cmdi: stats.threats_by_type.cmdi || 0,
+                pathtraversal: stats.threats_by_type.pathtraversal || 0
+            };
+
             const threatsData = {
-                labels: ['SQL Injection', 'XSS', 'Command Injection', 'Path Traversal'],
+                labels: ['🔴 SQL Injection', '🟠 XSS', '🟣 Command Injection', '🔵 Path Traversal'],
                 datasets: [{
-                    data: [
-                        stats.threats_by_type.sqli || 0,
-                        stats.threats_by_type.xss || 0,
-                        stats.threats_by_type.cmdi || 0,
-                        stats.threats_by_type.pathtraversal || 0
-                    ],
+                    data: [threats.sqli, threats.xss, threats.cmdi, threats.pathtraversal],
                     backgroundColor: [
-                        '#e74c3c',
-                        '#f39c12',
-                        '#9b59b6',
-                        '#3498db'
-                    ]
+                        'rgba(239, 68, 68, 0.8)',
+                        'rgba(249, 115, 22, 0.8)',
+                        'rgba(168, 85, 247, 0.8)',
+                        'rgba(6, 182, 212, 0.8)'
+                    ],
+                    borderColor: [
+                        '#ef4444',
+                        '#f97316',
+                        '#a855f7',
+                        '#06b6d4'
+                    ],
+                    borderWidth: 2
                 }]
             };
 
@@ -93,7 +185,15 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'bottom'
+                            position: 'bottom',
+                            labels: {
+                                color: '#94a3b8',
+                                padding: 15,
+                                font: {
+                                    size: 12,
+                                    weight: 600
+                                }
+                            }
                         }
                     }
                 }
@@ -101,32 +201,95 @@
         }
 
         function updateStatsDisplay(stats) {
-            const generalStats = document.getElementById('generalStats');
-            const efficiencyStats = document.getElementById('efficiencyStats');
-
             const blockRate = stats.total_requests > 0 ? 
                 ((stats.blocked_requests / stats.total_requests) * 100).toFixed(2) : 0;
+            
+            const successReqs = stats.total_requests - stats.blocked_requests;
 
+            // Update key metrics
+            document.getElementById('totalReqs').textContent = stats.total_requests.toLocaleString();
+            document.getElementById('blockedReqs').textContent = stats.blocked_requests.toLocaleString();
+            document.getElementById('successReqs').textContent = successReqs.toLocaleString();
+            document.getElementById('blockRate').textContent = blockRate + '%';
+
+            // General stats
+            const generalStats = document.getElementById('generalStats');
             generalStats.innerHTML = `
-                <div style="margin-bottom: 0.5rem;"><strong>Всего запросов:</strong> ${stats.total_requests}</div>
-                <div style="margin-bottom: 0.5rem;"><strong>Заблокировано:</strong> ${stats.blocked_requests}</div>
-                <div style="margin-bottom: 0.5rem;"><strong>SQLi атак:</strong> ${stats.threats_by_type.sqli || 0}</div>
-                <div style="margin-bottom: 0.5rem;"><strong>XSS атак:</strong> ${stats.threats_by_type.xss || 0}</div>
-                <div style="margin-bottom: 0.5rem;"><strong>Command Injection атак:</strong> ${stats.threats_by_type.cmdi || 0}</div>
-                <div style="margin-bottom: 0.5rem;"><strong>Path Traversal атак:</strong> ${stats.threats_by_type.pathtraversal || 0}</div>
-                <div><strong>Обновлено:</strong> ${new Date(stats.last_updated).toLocaleString()}</div>
-            `;
-
-            efficiencyStats.innerHTML = `
-                <div style="margin-bottom: 0.5rem;"><strong>Уровень блокировки:</strong> ${blockRate}%</div>
-                <div style="margin-bottom: 0.5rem;"><strong>Успешных запросов:</strong> ${stats.total_requests - stats.blocked_requests}</div>
-                <div style="margin-bottom: 0.5rem;">
-                    <strong>Статус:</strong> 
-                    <span class="badge ${blockRate > 5 ? 'badge-warning' : 'badge-success'}">
-                        ${blockRate > 5 ? 'Высокая активность' : 'Норма'}
-                    </span>
+                <div class="stat-item">
+                    <div class="stat-item-label">Всего запросов</div>
+                    <div class="stat-item-value">${stats.total_requests.toLocaleString()}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-item-label">Заблокировано</div>
+                    <div class="stat-item-value" style="color: #ef4444;">${stats.blocked_requests.toLocaleString()}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-item-label">✓ Успешных</div>
+                    <div class="stat-item-value" style="color: #10b981;">${successReqs.toLocaleString()}</div>
                 </div>
             `;
+
+            // Efficiency stats
+            const efficiencyStats = document.getElementById('efficiencyStats');
+            const threats = stats.threats_by_type;
+            efficiencyStats.innerHTML = `
+                <div class="stat-item" style="border-left-color: #ef4444;">
+                    <div class="stat-item-label">🔴 SQL Injection</div>
+                    <div class="stat-item-value" style="color: #ef4444;">${threats.sqli || 0}</div>
+                </div>
+                <div class="stat-item" style="border-left-color: #f97316;">
+                    <div class="stat-item-label">🟠 XSS</div>
+                    <div class="stat-item-value" style="color: #f97316;">${threats.xss || 0}</div>
+                </div>
+                <div class="stat-item" style="border-left-color: #a855f7;">
+                    <div class="stat-item-label">🟣 Command Injection</div>
+                    <div class="stat-item-value" style="color: #a855f7;">${threats.cmdi || 0}</div>
+                </div>
+                <div class="stat-item" style="border-left-color: #06b6d4;">
+                    <div class="stat-item-label">🔵 Path Traversal</div>
+                    <div class="stat-item-value" style="color: #06b6d4;">${threats.pathtraversal || 0}</div>
+                </div>
+            `;
+
+            // Last update
+            const lastUpdate = new Date(stats.last_updated);
+            document.getElementById('lastUpdate').innerHTML = `
+                <div style="color: #0ea5e9; font-weight: 600;">
+                    ${lastUpdate.toLocaleString('ru-RU')}
+                </div>
+                <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.5rem;">
+                    Обновления: каждые 10 секунд
+                </div>
+            `;
+
+            // Recommendations
+            const recommendations = document.getElementById('recommendations');
+            let recommendationText = '';
+            
+            if (blockRate > 10) {
+                recommendationText = '⚠️ Высокая активность атак. Рекомендуется проверить логи и усилить защиту.';
+            } else if (blockRate > 5) {
+                recommendationText = '⚡ Умеренная активность. Продолжайте мониторинг системы.';
+            } else if (blockRate > 0) {
+                recommendationText = '✓ Низкая активность атак. Система работает нормально.';
+            } else {
+                recommendationText = '✓ Атак не обнаружено. Система защищена отлично!';
+            }
+
+            if (threats.sqli > 0) {
+                recommendationText += '<br>🔴 SQL Injection атаки - проверьте валидацию входных данных.';
+            }
+            if (threats.xss > 0) {
+                recommendationText += '<br>🟠 XSS атаки - усильте защиту от скриптов.';
+            }
+            if (threats.cmdi > 0) {
+                recommendationText += '<br>🟣 Command Injection - проверьте использование системных команд.';
+            }
+            if (threats.pathtraversal > 0) {
+                recommendationText += '<br>🔵 Path Traversal - усильте контроль доступа к файлам.';
+            }
+
+            recommendations.innerHTML = recommendationText || '<p>✓ Нет специальных рекомендаций</p>';
         }
 
         // WebSocket для обновления статистики в реальном времени
@@ -140,6 +303,9 @@
 
         // Первоначальная загрузка
         loadStats();
+        
+        // Периодическое обновление
+        setInterval(loadStats, 10000);
     </script>
 </body>
 </html>

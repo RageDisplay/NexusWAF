@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WAF Dashboard</title>
+    <title>WAF Dashboard - NexusWAF</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <nav class="navbar">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <a href="/" class="navbar-brand">WAF Dashboard</a>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <a href="/" class="navbar-brand" style="display: flex; align-items: center; gap: 0.75rem;"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.6));"><path d="M16 2L4 8V14C4 23 16 30 16 30C16 30 28 23 28 14V8L16 2Z" fill="url(#gradient)" stroke="#0ea5e9" stroke-width="1.5"/><defs><linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" /><stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:1" /></linearGradient></defs></svg>NexusWAF</a>
             <ul class="navbar-nav">
                 <li><a href="/" class="nav-link active">Главная</a></li>
                 <li><a href="/config" class="nav-link">Настройки</a></li>
@@ -20,16 +20,20 @@
     </nav>
 
     <div class="container">
+        <!-- Stat Cards -->
         <div class="dashboard">
             <div class="card stat-card">
+                <div style="font-size: 2.5rem; margin-bottom: 1rem;"></div>
                 <div class="stat-number" id="totalRequests">{{.Stats.TotalRequests}}</div>
                 <div class="stat-label">Всего запросов</div>
             </div>
             <div class="card stat-card">
+                <div style="font-size: 2.5rem; margin-bottom: 1rem;"></div>
                 <div class="stat-number" id="blockedRequests">{{.Stats.BlockedRequests}}</div>
                 <div class="stat-label">Заблокировано</div>
             </div>
             <div class="card stat-card">
+                <div style="font-size: 2.5rem; margin-bottom: 1rem;"></div>
                 <div class="stat-number" id="blockRate">
                     {{if gt .Stats.TotalRequests 0}}
                         {{percent .Stats.BlockedRequests .Stats.TotalRequests}}%
@@ -39,42 +43,88 @@
             </div>
         </div>
 
+        <!-- Protection Status -->
         <div class="card">
-            <h2 style="margin-bottom: 1rem;">Статус защиты</h2>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <div style="width: 12px; height: 12px; border-radius: 50%; background: {{if .Config.EnableSQLi}}var(--success){{else}}var(--danger){{end}};"></div>
-                    <span>SQL Injection</span>
+            <h2>🛡️ Статус защиты</h2>
+            <div class="protection-grid">
+                <div class="protection-item" data-status="{{if .Config.EnableSQLi}}active{{else}}inactive{{end}}">
+                    <div style="font-size: 1.5rem;">{{if .Config.EnableSQLi}}✓{{else}}✕{{end}}</div>
+                    <div>
+                        <div style="color: #0ea5e9; font-weight: 600;">SQL Injection</div>
+                        <div style="color: #94a3b8; font-size: 0.85rem;">{{if .Config.EnableSQLi}}Активно{{else}}Отключено{{end}}</div>
+                    </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <div style="width: 12px; height: 12px; border-radius: 50%; background: {{if .Config.EnableXSS}}var(--success){{else}}var(--danger){{end}};"></div>
-                    <span>XSS Protection</span>
+                <div class="protection-item" data-status="{{if .Config.EnableXSS}}active{{else}}inactive{{end}}">
+                    <div style="font-size: 1.5rem;">{{if .Config.EnableXSS}}✓{{else}}✕{{end}}</div>
+                    <div>
+                        <div style="color: #0ea5e9; font-weight: 600;">XSS Protection</div>
+                        <div style="color: #94a3b8; font-size: 0.85rem;">{{if .Config.EnableXSS}}Активно{{else}}Отключено{{end}}</div>
+                    </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <div style="width: 12px; height: 12px; border-radius: 50%; background: {{if .Config.EnableCMDi}}var(--success){{else}}var(--danger){{end}};"></div>
-                    <span>Command Injection</span>
+                <div class="protection-item" data-status="{{if .Config.EnableCMDi}}active{{else}}inactive{{end}}">
+                    <div style="font-size: 1.5rem;">{{if .Config.EnableCMDi}}✓{{else}}✕{{end}}</div>
+                    <div>
+                        <div style="color: #0ea5e9; font-weight: 600;">Command Injection</div>
+                        <div style="color: #94a3b8; font-size: 0.85rem;">{{if .Config.EnableCMDi}}Активно{{else}}Отключено{{end}}</div>
+                    </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <div style="width: 12px; height: 12px; border-radius: 50%; background: {{if .Config.EnablePath}}var(--success){{else}}var(--danger){{end}};"></div>
-                    <span>Path Traversal</span>
+                <div class="protection-item" data-status="{{if .Config.EnablePath}}active{{else}}inactive{{end}}">
+                    <div style="font-size: 1.5rem;">{{if .Config.EnablePath}}✓{{else}}✕{{end}}</div>
+                    <div>
+                        <div style="color: #0ea5e9; font-weight: 600;">Path Traversal</div>
+                        <div style="color: #94a3b8; font-size: 0.85rem;">{{if .Config.EnablePath}}Активно{{else}}Отключено{{end}}</div>
+                    </div>
                 </div>
             </div>
         </div>
 
+        <!-- Current Configuration -->
         <div class="card">
-            <h2 style="margin-bottom: 1rem;">Текущая конфигурация</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                <div>
-                    <strong>Защищаемое приложение:</strong><br>
-                    {{.Config.TargetURL}}
+            <h2>⚙️ Текущая конфигурация</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.5rem;">
+                <div style="padding: 1.5rem; background: rgba(6, 182, 212, 0.05); border-radius: 8px; border: 1px solid rgba(6, 182, 212, 0.1);">
+                    <div style="color: #94a3b8; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Защищаемое приложение</div>
+                    <div style="color: #0ea5e9; font-weight: 600; word-break: break-all; font-family: 'Monaco', 'Courier New', monospace;">{{.Config.TargetURL}}</div>
                 </div>
-                <div>
-                    <strong>Порт WAF:</strong><br>
-                    {{.Config.ListenPort}}
+                <div style="padding: 1.5rem; background: rgba(6, 182, 212, 0.05); border-radius: 8px; border: 1px solid rgba(6, 182, 212, 0.1);">
+                    <div style="color: #94a3b8; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">Порт WAF</div>
+                    <div style="color: #0ea5e9; font-weight: 600; font-size: 1.5rem; font-family: 'Monaco', 'Courier New', monospace;">{{.Config.ListenPort}}</div>
                 </div>
             </div>
-            <div style="margin-top: 1rem;">
-                <a href="/config" class="btn btn-primary">Изменить настройки</a>
+            <div style="margin-top: 2rem;">
+                <a href="/config" class="btn btn-primary">⚙️ Изменить настройки</a>
+            </div>
+        </div>
+
+        <!-- System Status -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+            <div class="card">
+                <h3>Система</h3>
+                <div style="margin-top: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid rgba(6, 182, 212, 0.1);">
+                        <span style="color: #94a3b8;">Статус</span>
+                        <span style="color: #10b981; font-weight: 600;">●  Активна</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid rgba(6, 182, 212, 0.1);">
+                        <span style="color: #94a3b8;">Версия</span>
+                        <span style="color: #0ea5e9; font-weight: 600;">v2.0.0</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0;">
+                        <span style="color: #94a3b8;">Обновления</span>
+                        <span style="color: #10b981; font-weight: 600;">Актуально</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📱 Быстрые ссылки</h3>
+                <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem;">
+                    <a href="/logs" style="padding: 1rem; background: rgba(6, 182, 212, 0.1); border-radius: 8px; color: #0ea5e9; text-decoration: none; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='rgba(6, 182, 212, 0.2)'; this.style.transform='translateX(5px)'" onmouseout="this.style.background='rgba(6, 182, 212, 0.1)'; this.style.transform='translateX(0)'">
+                        Просмотр логов безопасности
+                    </a>
+                    <a href="/stats" style="padding: 1rem; background: rgba(6, 182, 212, 0.1); border-radius: 8px; color: #0ea5e9; text-decoration: none; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.5rem;" onmouseover="this.style.background='rgba(6, 182, 212, 0.2)'; this.style.transform='translateX(5px)'" onmouseout="this.style.background='rgba(6, 182, 212, 0.1)'; this.style.transform='translateX(0)'">
+                        Аналитика и статистика
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -85,16 +135,43 @@
         
         ws.onmessage = function(event) {
             const stats = JSON.parse(event.data);
-            document.getElementById('totalRequests').textContent = stats.total_requests;
-            document.getElementById('blockedRequests').textContent = stats.blocked_requests;
+            
+            // Плавный переход чисел
+            animateValue('totalRequests', parseInt(document.getElementById('totalRequests').textContent), stats.total_requests, 500);
+            animateValue('blockedRequests', parseInt(document.getElementById('blockedRequests').textContent), stats.blocked_requests, 500);
             
             // Вычисляем процент блокировки
             let blockRate = "0.00";
             if (stats.total_requests > 0) {
                 blockRate = ((stats.blocked_requests / stats.total_requests) * 100).toFixed(2);
             }
-            document.getElementById('blockRate').textContent = blockRate + '%';
+            animateValue('blockRate', parseFloat(document.getElementById('blockRate').textContent), parseFloat(blockRate), 500);
         };
+
+        function animateValue(elementId, start, end, duration) {
+            let startTimestamp = null;
+            const element = document.getElementById(elementId);
+            
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                
+                const isPercentage = element.id === 'blockRate';
+                const value = Math.floor(progress * (end - start) + start);
+                
+                if (isPercentage) {
+                    element.textContent = (parseFloat(value) + (end - start) * progress).toFixed(2) + '%';
+                } else {
+                    element.textContent = value;
+                }
+                
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                }
+            };
+            
+            requestAnimationFrame(step);
+        }
     </script>
 </body>
 </html>

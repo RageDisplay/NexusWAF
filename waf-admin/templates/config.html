@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Настройки WAF</title>
+    <title>Настройки WAF - NexusWAF</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <nav class="navbar">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <a href="/" class="navbar-brand">WAF Dashboard</a>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <a href="/" class="navbar-brand" style="display: flex; align-items: center; gap: 0.75rem;"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.6));"><path d="M16 2L4 8V14C4 23 16 30 16 30C16 30 28 23 28 14V8L16 2Z" fill="url(#gradient)" stroke="#0ea5e9" stroke-width="1.5"/><defs><linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" /><stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:1" /></linearGradient></defs></svg>NexusWAF</a>
             <ul class="navbar-nav">
                 <li><a href="/" class="nav-link">Главная</a></li>
                 <li><a href="/config" class="nav-link active">Настройки</a></li>
@@ -21,58 +21,115 @@
 
     <div class="container">
         <div class="config-form">
-            <h2 style="margin-bottom: 2rem;">Настройки WAF</h2>
+            <h2 style="margin-bottom: 0.5rem;">⚙️ Настройки WAF</h2>
+            <p style="color: #94a3b8; margin-bottom: 2rem;">Управление параметрами защиты и конфигурацией системы</p>
             
             <form id="configForm">
-                <div class="form-group">
-                    <label class="form-label">URL защищаемого приложения</label>
-                    <input type="url" class="form-control" name="target_url" value="{{.TargetURL}}" required 
-                           placeholder="http://192.168.200.50:7000">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Порт WAF</label>
-                    <input type="number" class="form-control" name="listen_port" value="{{.ListenPort}}" required 
-                           min="1" max="65535">
-                </div>
-
-                <div class="form-group">
-                    <label style="font-weight: bold; margin-bottom: 1rem; display: block;">Модули защиты</label>
+                <!-- Application Settings Section -->
+                <div style="margin-bottom: 2.5rem; padding: 2rem; background: rgba(6, 182, 212, 0.05); border-radius: 12px; border: 1px solid rgba(6, 182, 212, 0.1);">
+                    <h3 style="color: #0ea5e9; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        Параметры приложения
+                    </h3>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="enable_sqli" name="enable_sqli" {{if .EnableSQLi}}checked{{end}}>
-                            <label for="enable_sqli">SQL Injection Protection</label>
+                    <div class="form-group">
+                        <label class="form-label">URL защищаемого приложения</label>
+                        <input type="url" class="form-control" name="target_url" value="{{.TargetURL}}" required 
+                               placeholder="http://192.168.1.100:7000">
+                        <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.5rem;">
+                            Адрес приложения, которое защищает WAF
                         </div>
+                    </div>
 
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="enable_xss" name="enable_xss" {{if .EnableXSS}}checked{{end}}>
-                            <label for="enable_xss">XSS Protection</label>
-                        </div>
-
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="enable_cmdi" name="enable_cmdi" {{if .EnableCMDi}}checked{{end}}>
-                            <label for="enable_cmdi">Command Injection Protection</label>
-                        </div>
-
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="enable_path" name="enable_path" {{if .EnablePath}}checked{{end}}>
-                            <label for="enable_path">Path Traversal Protection</label>
+                    <div class="form-group">
+                        <label class="form-label">Порт WAF (прокси)</label>
+                        <input type="number" class="form-control" name="listen_port" value="{{.ListenPort}}" required 
+                               min="1" max="65535">
+                        <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.5rem;">
+                            💡 Порт, на котором слушает WAF
                         </div>
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary" id="saveBtn">
-                    <span id="saveText">Сохранить настройки</span>
-                    <span id="saveLoading" class="loading" style="display: none;"></span>
-                </button>
+                <!-- Protection Modules Section -->
+                <div style="margin-bottom: 2rem; padding: 2rem; background: rgba(6, 182, 212, 0.05); border-radius: 12px; border: 1px solid rgba(6, 182, 212, 0.1);">
+                    <h3 style="color: #0ea5e9; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        🛡️ Модули защиты
+                    </h3>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                        <div class="checkbox-group" style="flex-direction: column; align-items: flex-start; background: transparent; border: 1px solid rgba(6, 182, 212, 0.2); padding: 1.5rem; border-radius: 8px;">
+                            <label style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; cursor: pointer; width: 100%;">
+                                <input type="checkbox" id="enable_sqli" name="enable_sqli" {{if .EnableSQLi}}checked{{end}} style="width: 20px; height: 20px; cursor: pointer;">
+                                <div>
+                                    <div style="color: #0ea5e9; font-weight: 600;">SQL Injection Protection</div>
+                                    <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.25rem;">Защита от SQL-инъекций</div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="checkbox-group" style="flex-direction: column; align-items: flex-start; background: transparent; border: 1px solid rgba(6, 182, 212, 0.2); padding: 1.5rem; border-radius: 8px;">
+                            <label style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; cursor: pointer; width: 100%;">
+                                <input type="checkbox" id="enable_xss" name="enable_xss" {{if .EnableXSS}}checked{{end}} style="width: 20px; height: 20px; cursor: pointer;">
+                                <div>
+                                    <div style="color: #0ea5e9; font-weight: 600;">XSS Protection</div>
+                                    <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.25rem;">Защита от кросс-сайтовых скриптов</div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="checkbox-group" style="flex-direction: column; align-items: flex-start; background: transparent; border: 1px solid rgba(6, 182, 212, 0.2); padding: 1.5rem; border-radius: 8px;">
+                            <label style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; cursor: pointer; width: 100%;">
+                                <input type="checkbox" id="enable_cmdi" name="enable_cmdi" {{if .EnableCMDi}}checked{{end}} style="width: 20px; height: 20px; cursor: pointer;">
+                                <div>
+                                    <div style="color: #0ea5e9; font-weight: 600;">Command Injection Protection</div>
+                                    <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.25rem;">Защита от инъекций команд</div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="checkbox-group" style="flex-direction: column; align-items: flex-start; background: transparent; border: 1px solid rgba(6, 182, 212, 0.2); padding: 1.5rem; border-radius: 8px;">
+                            <label style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; cursor: pointer; width: 100%;">
+                                <input type="checkbox" id="enable_path" name="enable_path" {{if .EnablePath}}checked{{end}} style="width: 20px; height: 20px; cursor: pointer;">
+                                <div>
+                                    <div style="color: #0ea5e9; font-weight: 600;">Path Traversal Protection</div>
+                                    <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.25rem;">Защита от обхода каталогов</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 1rem; margin-top: 2.5rem;">
+                    <button type="submit" class="btn btn-primary" id="saveBtn">
+                        <span id="saveText">Сохранить настройки</span>
+                        <span id="saveLoading" class="loading" style="display: none;"></span>
+                    </button>
+                    <button type="button" class="btn" id="resetBtn" style="background: rgba(6, 182, 212, 0.1); color: #0ea5e9; border: 1px solid rgba(6, 182, 212, 0.3);">
+                        ↺ Сбросить
+                    </button>
+                </div>
             </form>
 
-            <div id="message" style="margin-top: 1rem;"></div>
+            <!-- Message Area -->
+            <div id="message" style="margin-top: 1.5rem;"></div>
+
+            <!-- Info Section -->
+            <div style="margin-top: 3rem; padding: 1.5rem; background: rgba(16, 185, 129, 0.05); border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2);">
+                <div style="color: #10b981; font-weight: 600; margin-bottom: 0.5rem;">Информация</div>
+                <div style="color: #94a3b8; font-size: 0.9rem; line-height: 1.6;">
+                    Все изменения применятся немедленно, кроме номера порта WAF, который требует перезагрузки сервиса.
+                    Убедитесь, что используемый порт свободен и доступен для подключения.
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
+        document.getElementById('resetBtn').addEventListener('click', function() {
+            location.reload();
+        });
+
         document.getElementById('configForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -105,7 +162,7 @@
                 });
 
                 if (response.ok) {
-                    message.innerHTML = '<div class="alert alert-success">Настройки успешно сохранены!</div>';
+                    message.innerHTML = '<div class="alert alert-success">✓ Настройки успешно сохранены!</div>';
                     setTimeout(() => {
                         window.location.reload();
                     }, 2000);
@@ -113,7 +170,7 @@
                     throw new Error('Ошибка сохранения');
                 }
             } catch (error) {
-                message.innerHTML = '<div class="alert alert-danger">Ошибка сохранения настроек: ' + error.message + '</div>';
+                message.innerHTML = '<div class="alert alert-danger">✕ Ошибка сохранения настроек: ' + error.message + '</div>';
             } finally {
                 saveText.style.display = 'inline-block';
                 saveLoading.style.display = 'none';
