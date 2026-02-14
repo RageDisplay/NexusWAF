@@ -1,6 +1,5 @@
-# 🛡️ NexusWAF - Web Application Firewall
+# NexusWAF
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/badge/Go-1.24.1-blue.svg)](https://golang.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com)
 
@@ -22,13 +21,13 @@
 
 **NexusWAF** - это микросервисная архитектура для защиты веб-приложений с поддержкой:
 
-✅ **SQL Injection Protection** - обнаружение и блокировка SQL-атак  
-✅ **XSS Protection** - защита от кросс-сайтовых скриптов  
-✅ **Command Injection Protection** - блокировка инъекций команд оболочки  
-✅ **Path Traversal Protection** - защита от обхода каталогов  
-✅ **Rate Limiting** - защита от DDoS-атак  
-✅ **Real-time Dashboard** - мониторинг в реальном времени  
-✅ **Dynamic Port Configuration** - динамическая смена портов без перезагрузки  
+**SQL Injection Protection** - обнаружение и блокировка SQL-атак  
+**XSS Protection** - защита от кросс-сайтовых скриптов  
+**Command Injection Protection** - блокировка инъекций команд оболочки  
+**Path Traversal Protection** - защита от обхода каталогов  
+**Rate Limiting** - защита от DDoS-атак  
+**Real-time Dashboard** - мониторинг в реальном времени  
+**Dynamic Port Configuration** - динамическая смена портов без перезагрузки  
 
 ---
 
